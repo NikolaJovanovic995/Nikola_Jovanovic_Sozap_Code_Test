@@ -1,46 +1,29 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private LevelController _levelController;
 
-    public void Awake()
+    public void Init()
     {
-        InputController.OnMoveAttempt += InputController_OnMoveAttempt;
+        InputController.OnMoveAttempt += onMoveAttempt;
     }
 
-    private void InputController_OnMoveAttempt(Vector2Int pDirection)
+    private void onMoveAttempt(Vector2Int pDirection)
     {
-        Vector2Int _currentPlayerPosition = _levelController.PlayerPosition;
-        Vector2Int _targetPlayerPosition = _currentPlayerPosition + pDirection;
-        if (isPositionInvalid(_targetPlayerPosition))
-        {
-            return;
-        }
+        Vector2Int lCurrentPlayerPosition = _levelController.PlayerPosition;
+        Vector2Int lTargetPlayerPosition = lCurrentPlayerPosition + pDirection;
+        MapElementType lTargetedTile = _levelController.GetElementAtIndex(lTargetPlayerPosition.x, lTargetPlayerPosition.y);
 
-        MapElementType targetedTile = _levelController.MapMatrix[_targetPlayerPosition.x, _targetPlayerPosition.y];
-        switch (targetedTile)
+        switch (lTargetedTile)
         {
-            case MapElementType.WALL:
-                return;
             case MapElementType.BOX_HOLDER:
             case MapElementType.GRASS:
-                _levelController.MovePlayer(_targetPlayerPosition);
+                _levelController.MovePlayer(lTargetPlayerPosition);
                 break;
             case MapElementType.BOX:
             case MapElementType.BOX_HOLDER_WITH_BOX:
-                Vector2Int _targetBoxPosition = _targetPlayerPosition + pDirection;
-                if (isPositionInvalid(_targetBoxPosition) || isTargetPositionForBoxImpossible(_targetBoxPosition))
-                {
-                    return;
-                }
-                else
-                {
-                    _levelController.MovePlayer(_targetPlayerPosition, true, _targetBoxPosition);
-                }
-
+                tryBoxPush(lTargetPlayerPosition + pDirection, lTargetPlayerPosition);
                 break;
             default:
                 break;
@@ -48,14 +31,17 @@ public class PlayerController : MonoBehaviour
 
     }
 
-    private bool isPositionInvalid(Vector2Int pPosition)
+    private void tryBoxPush(Vector2Int pTargetBoxPosition, Vector2Int pTargetPlayerPosition)
     {
-        return (pPosition.x < 0 || pPosition.y < 0 || pPosition.x >= _levelController.MapMatrix.GetLength(0) || pPosition.y >= _levelController.MapMatrix.GetLength(1));
+        if (isTargetPositionForBoxPossible(pTargetBoxPosition))
+        {
+            _levelController.MovePlayer(pTargetPlayerPosition, true, pTargetBoxPosition);
+        }
     }
 
-    private bool isTargetPositionForBoxImpossible(Vector2Int pPosition)
+    private bool isTargetPositionForBoxPossible(Vector2Int pPosition)
     {
-        MapElementType mapElementType = (MapElementType)_levelController.MapMatrix[pPosition.x, pPosition.y];
-        return mapElementType == MapElementType.WALL || mapElementType == MapElementType.BOX;
+        MapElementType mapElementType = _levelController.GetElementAtIndex(pPosition.x, pPosition.y);
+        return mapElementType == MapElementType.GRASS || mapElementType == MapElementType.BOX_HOLDER;
     }
 }
