@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// Main manager that controlls all components
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private Camera _mainCamera;
@@ -9,40 +12,40 @@ public class GameManager : MonoBehaviour
 
     private DataManager _dataManager;
 
-
     public void Awake()
     {
+        bool lIsMobilePlatform = Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer;
+        InputController.ProcessKeyboardInput = !lIsMobilePlatform;
+        AudioManager.Instance.Play("ThemeSong");
         _dataManager = new DataManager();
         _dataManager.Init();
-        _menuMenager.Init(_dataManager.CompletedLevelsCount);
         _menuMenager.OnLevelSelect += onLevelSelect;
+        _menuMenager.Init(_dataManager.CompletedLevelCount, _dataManager.SelectedLevelIndex, _dataManager.TotalLevelCount, lIsMobilePlatform);
         _menuMenager.OnPlayClick += onPlayClick;
         _menuMenager.OnResetLevelClick += onResetLevelClick;
         _menuMenager.OnNextLevelClick += onNextLevelClick;
-        _playerController.Init();
+        _playerController.Init(_levelController);
         _levelController.OnLevelComplete += onLevelComplete;
-        _menuMenager.ShowMainMenu();
     }
 
     private void onLevelSelect(int pIndex)
     {
-        _menuMenager.ShowBestScoreInfo(_dataManager.ReadBestScoreData(pIndex));
+        _menuMenager.ShowLevelBestScoreInfo(_dataManager.ReadLevelBestScoreData(pIndex));
     }
 
     private void onLevelComplete()
     {
-        int lMinutes, lSeconds;
-        _menuMenager.StopTimerAndGetValues(out lMinutes, out lSeconds);
+        _menuMenager.StopTimerAndGetValues(out int lMinutes, out int lSeconds);
         _menuMenager.SetNextLevelButtonActive(_dataManager.CheckIfNotLastLevel());
-        _dataManager.LevelCompleted(lMinutes, lSeconds);
+        _dataManager.UpdateLevelBestScoreData(lMinutes, lSeconds);
         InputController.ProcessPlayerMovementInput = false;
+        _menuMenager.RefreshChooseLevelDropdownOptions(_dataManager.CompletedLevelCount, _dataManager.SelectedLevelIndex);
     }
 
     private void onPlayClick()
     {
-        MapData lMapData = _dataManager.ReadSelectedLevelData();
+        playLevel(_dataManager.ReadSelectedLevelData());
         _menuMenager.HideMainMenu();
-        playLevel(lMapData);
     }
 
     private void onResetLevelClick()
@@ -54,14 +57,13 @@ public class GameManager : MonoBehaviour
 
     private void onNextLevelClick()
     {
-        MapData lMapData = _dataManager.ReadNextLevelData();
-        playLevel(lMapData);
+        playLevel(_dataManager.ReadNextLevelData());
     }
 
     private void setCameraSizeAndPosition(Vector2Int pMapDimensions)
     {
         _mainCamera.transform.position = new Vector3(pMapDimensions.x / 2f, pMapDimensions.y / 2f, -10f);
-        _mainCamera.orthographicSize = pMapDimensions.y / 2f;
+        _mainCamera.orthographicSize = pMapDimensions.y / 2f +1;
     }
 
     private void playLevel(MapData pMapData)

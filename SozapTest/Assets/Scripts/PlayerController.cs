@@ -1,11 +1,15 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// Catches the event for move attempt, checks if it is valid, and passes it to LevelController
+/// </summary>
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private LevelController _levelController;
+    private LevelController _levelController;
 
-    public void Init()
+    public void Init(LevelController pLevelController)
     {
+        _levelController = pLevelController;
         InputController.OnMoveAttempt += onMoveAttempt;
     }
 
@@ -22,10 +26,11 @@ public class PlayerController : MonoBehaviour
                 _levelController.MovePlayer(lTargetPlayerPosition);
                 break;
             case MapElementType.BOX:
-            case MapElementType.BOX_HOLDER_WITH_BOX:
+            case MapElementType.BOX_HOLDER_AND_BOX:
                 tryBoxPush(lTargetPlayerPosition + pDirection, lTargetPlayerPosition);
                 break;
             default:
+                AudioManager.Instance.Play("CantMove");
                 break;
         }
 
@@ -36,6 +41,10 @@ public class PlayerController : MonoBehaviour
         if (isTargetPositionForBoxPossible(pTargetBoxPosition))
         {
             _levelController.MovePlayer(pTargetPlayerPosition, true, pTargetBoxPosition);
+        }
+        else
+        {
+            AudioManager.Instance.Play("CantMove");
         }
     }
 

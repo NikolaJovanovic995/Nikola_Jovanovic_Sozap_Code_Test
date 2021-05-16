@@ -1,9 +1,15 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Audio;
 
+/// <summary>
+/// Singleton class used to control all sound effects
+/// </summary>
 public class AudioManager : MonoBehaviour
 {
     [SerializeField] private Sound[] _soundsArray;
+    [SerializeField] private AudioMixerGroup _audioMixerGroup;
+
     public static AudioManager Instance;
 
     private void Awake()
@@ -23,9 +29,15 @@ public class AudioManager : MonoBehaviour
             lSound.AudioSource = gameObject.AddComponent<AudioSource>();
             lSound.AudioSource.clip = lSound.AudioClip;
             lSound.AudioSource.volume = lSound.Volume;
-            lSound.AudioSource.pitch = lSound.Pitch;
             lSound.AudioSource.loop = lSound.Loop;
+            lSound.AudioSource.outputAudioMixerGroup = _audioMixerGroup;
         }
+    }
+
+    public void SetVolume(float pSliderValue)
+    {
+        float lValue = Mathf.Clamp(pSliderValue, 0.0001f, 1f);
+        _audioMixerGroup.audioMixer.SetFloat("Volume", Mathf.Log10(lValue) * 20);
     }
 
     public void Play(string pName)

@@ -2,41 +2,36 @@
 using System.IO;
 using UnityEngine;
 
+/// <summary>
+/// Manages saving and loading of game data, keeps data for currently selected level, total number of levels, and number of finished levels
+/// </summary>
 public class DataManager
 {
-    private const int TOTAL_LEVEL_COUNT = 4;
-    private int _completedLevelsCount = 0;
-    private int _selectedLevelIndex = 1;
-    private BestScore _selectedLevelBestScore;
-    private MapData _selectedLevelMapData;
-
-    public int CompletedLevelsCount => _completedLevelsCount;
+    public int SelectedLevelIndex => _selectedLevelIndex;
+    public int CompletedLevelCount => _completedLevelCount;
     public int TotalLevelCount => TOTAL_LEVEL_COUNT;
     public MapData SelectedLevelMapData => _selectedLevelMapData;
 
+    private const int TOTAL_LEVEL_COUNT = 4;
+    private const string COMPLETED_LEVEL_KEY = "CompletedLevelCount";
+    private string _localFilePath;
+    private int _completedLevelCount = 0;
+    private int _selectedLevelIndex = 1;
+    private LevelBestScore _selectedLevelBestScore;
+    private MapData _selectedLevelMapData;
+
     public void Init()
     {
-       if(PlayerPrefs.HasKey("CompletedLevelsCount"))
+       if(PlayerPrefs.HasKey(COMPLETED_LEVEL_KEY))
        {
-            _completedLevelsCount = PlayerPrefs.GetInt("CompletedLevelsCount");
+            _completedLevelCount = PlayerPrefs.GetInt(COMPLETED_LEVEL_KEY);
        }
-    }
-
-    private string getLocalFilePath(int pLevelNumber)
-    {
-        if (Application.platform == RuntimePlatform.Android)
-        {
-            return Application.persistentDataPath + "/" + "Level_" + pLevelNumber + ".json";
-        }
-        else
-        {
-            return Application.dataPath + "/" + "Level_" + pLevelNumber + ".json";
-        }
+       _localFilePath = Application.platform == RuntimePlatform.Android ? Application.persistentDataPath : Application.dataPath;
     }
 
     public MapData ReadSelectedLevelData()
     {
-        string lJsonString = File.ReadAllText("Assets/Resources/LevelData/Level_"+ _selectedLevelIndex +".json");
+        string lJsonString = Resources.Load<TextAsset>("LevelData/Level_" + _selectedLevelIndex).text;
         return _selectedLevelMapData = JsonUtility.FromJson<MapData>(lJsonString);
     }
 
@@ -51,12 +46,12 @@ public class DataManager
         return _selectedLevelIndex < TOTAL_LEVEL_COUNT;
     }
 
-    public void LevelCompleted(int pMinutes, int pSeconds)
+    public void UpdateLevelBestScoreData(int pMinutes, int pSeconds)
     {
         if(_selectedLevelBestScore != null)
         {
             _selectedLevelBestScore.TotalPlaysCount++;
-            if(pMinutes *60 + pSeconds < _selectedLevelBestScore.Minutes * 60 + _selectedLevelBestScore.Seconds)
+            if(pMinutes * 60 + pSeconds < _selectedLevelBestScore.Minutes * 60 + _selectedLevelBestScore.Seconds)
             {
                 _selectedLevelBestScore.Minutes = pMinutes;
                 _selectedLevelBestScore.Seconds = pSeconds;
@@ -64,25 +59,29 @@ public class DataManager
         }
         else
         {
-            _selectedLevelBestScore = new BestScore(pMinutes, pSeconds, 1);
-            _completedLevelsCount++;
-            PlayerPrefs.SetInt("CompletedLevelsCount", _completedLevelsCount);
+            _selectedLevelBestScore = new LevelBestScore(pMinutes, pSeconds, 1);
+            _completedLevelCount++;
+            PlayerPrefs.SetInt(COMPLETED_LEVEL_KEY, _completedLevelCount);
         }
-        File.WriteAllText(getLocalFilePath(_selectedLevelIndex) , JsonUtility.ToJson(_selectedLevelBestScore));
+        File.WriteAllText(getBestScoreLevelLocalFilePath(_selectedLevelIndex) , JsonUtility.ToJson(_selectedLevelBestScore));
     }
 
-    public BestScore ReadBestScoreData(int pIndex)
+    public LevelBestScore ReadLevelBestScoreData(int pIndex)
     {
         _selectedLevelIndex = pIndex;
         _selectedLevelBestScore = null;
-        string lFilePath = getLocalFilePath(pIndex);
+        string lFilePath = getBestScoreLevelLocalFilePath(_selectedLevelIndex);
         if (File.Exists(lFilePath))
         {
             string lJsonString = File.ReadAllText(lFilePath);
-
-            _selectedLevelBestScore = JsonUtility.FromJson<BestScore>(lJsonString);
+            _selectedLevelBestScore = JsonUtility.FromJson<LevelBestScore>(lJsonString);
         }
         return _selectedLevelBestScore;
+    }
+
+    private string getBestScoreLevelLocalFilePath(int pLevelNumber)
+    {
+        return _localFilePath + "/BestScoreLevel_" + pLevelNumber + ".json";
     }
 }
 
@@ -103,17 +102,18 @@ public enum MapElementType
     BOX = 3,
     BOX_HOLDER = 4,
     PLAYER = 5,
-    BOX_HOLDER_WITH_BOX = 6
+    BOX_HOLDER_AND_BOX = 6,
+    BOX_HOLDER_AND_PLAYER = 7
 }
 
 [Serializable]
-public class BestScore
+public class LevelBestScore
 {
     public int Minutes;
     public int Seconds;
     public int TotalPlaysCount;
 
-    public BestScore(int pMinutes, int pSeconds, int pTotalPlaysCount)
+    public LevelBestScore(int pMinutes, int pSeconds, int pTotalPlaysCount)
     {
         Minutes= pMinutes;
         Seconds= pSeconds;

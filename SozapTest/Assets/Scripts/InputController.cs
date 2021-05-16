@@ -1,36 +1,46 @@
 ﻿using System;
 using UnityEngine;
 
+/// <summary>
+/// Manages input events
+/// </summary>
 public class InputController : MonoBehaviour
 {
     public static event Action<Vector2Int> OnMoveAttempt;
     public static bool ProcessPlayerMovementInput = false;
+    public static bool ProcessKeyboardInput = false;
 
-    void Update()
+    public static void FireMoveEvent(Vector2Int pDirection)
     {
         if (ProcessPlayerMovementInput)
         {
-        #if UNITY_ANDROID
-        //TODO: Add code for android input
-        #else
+            OnMoveAttempt?.Invoke(pDirection);
+        }
+    }
 
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+    public void Update()
+    {
+        if (ProcessKeyboardInput)
+        {
+            if (ProcessPlayerMovementInput)
             {
-                OnMoveAttempt?.Invoke(Vector2Int.up);
+                if (Input.GetKeyDown(KeyCode.UpArrow))
+                {
+                    OnMoveAttempt?.Invoke(Vector2Int.up);
+                }
+                else if (Input.GetKeyDown(KeyCode.DownArrow))
+                {
+                    OnMoveAttempt?.Invoke(Vector2Int.down);
+                }
+                else if (Input.GetKeyDown(KeyCode.LeftArrow))
+                {
+                    OnMoveAttempt?.Invoke(Vector2Int.left);
+                }
+                else if (Input.GetKeyDown(KeyCode.RightArrow))
+                {
+                    OnMoveAttempt?.Invoke(Vector2Int.right);
+                }
             }
-            else if (Input.GetKeyDown(KeyCode.DownArrow))
-            {
-                OnMoveAttempt?.Invoke(Vector2Int.down);
-            }
-            else if (Input.GetKeyDown(KeyCode.LeftArrow))
-            {
-                OnMoveAttempt?.Invoke(Vector2Int.left);
-            }
-            else if (Input.GetKeyDown(KeyCode.RightArrow))
-            {
-                OnMoveAttempt?.Invoke(Vector2Int.right);
-            }
-        #endif
         }
     }
 }
